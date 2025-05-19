@@ -1,0 +1,2042 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Görev Terminali</title>
+  <style>
+    :root {
+      --primary-color: #00FF00;
+      --secondary-color: #00CC00;
+      --background-color: #000000;
+      --text-color: #00FF00;
+      --error-color: #FF0000;
+      --success-color: #00FF00;
+      --warning-color: #FFFF00;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background-color);
+      color: var(--text-color);
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 1em;
+      line-height: 1.6;
+    }
+
+    #terminal {
+      margin-top: 20px;
+      padding: 20px;
+      height: calc(85vh - 20px);
+      overflow-y: auto;
+      white-space: pre-wrap;
+      background: rgba(0, 0, 0, 0.9);
+      border: 1px solid var(--primary-color);
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+      position: relative;
+      z-index: 1;
+      margin-right: 260px;
+    }
+
+    #terminal::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+      animation: scan 2s linear infinite;
+    }
+
+    @keyframes scan {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    #command {
+      width: calc(100% - 260px);
+      padding: 10px;
+      border: none;
+      background: var(--background-color);
+      color: var(--text-color);
+      font-family: 'Fira Code', monospace;
+      font-size: 1em;
+      border-top: 1px solid var(--primary-color);
+      outline: none;
+      transition: all 0.3s ease;
+      margin-right: 260px;
+    }
+
+    #command:focus {
+      box-shadow: 0 0 10px var(--primary-color);
+    }
+
+    #timer {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      background-color: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 4px 14px;
+      font-family: 'Fira Code', monospace;
+      font-size: 1.6em;
+      z-index: 9999;
+      transition: all 0.3s ease;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      width: 200px;
+      text-align: center;
+    }
+
+    #lives {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      color: var(--primary-color);
+      background-color: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 4px 14px;
+      font-family: 'Fira Code', monospace;
+      font-size: 1.1em;
+      z-index: 9999;
+      transition: all 0.3s ease;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      transform: translateZ(0);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 7px;
+      width: 200px;
+    }
+
+    .data-text {
+      font-size: 0.9em;
+      color: var(--primary-color);
+      width: 100%;
+      text-align: center;
+    }
+
+    .data-boxes {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      width: 100%;
+    }
+
+    .data-box {
+      width: 24px;
+      height: 24px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-right: 8px;
+    }
+
+    .data-box::before {
+      content: '';
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Font Awesome 6 Brands", "Font Awesome 6 Free";
+      font-weight: 900;
+      font-size: 18px;
+      color: var(--primary-color);
+    }
+
+    .data-box[data-type="WhatsApp"]::before {
+      content: "\f232";
+      font-family: "Font Awesome 6 Brands";
+    }
+
+    .data-box[data-type="Instagram"]::before {
+      content: "\f16d";
+      font-family: "Font Awesome 6 Brands";
+    }
+
+    .data-box[data-type="Galeri"]::before {
+      content: "\f03e";
+      font-family: "Font Awesome 6 Free";
+    }
+
+    .data-box[data-type="Rehber"]::before {
+      content: "\f007";
+      font-family: "Font Awesome 6 Free";
+    }
+
+    .data-box[data-type="Banka"]::before {
+      content: "\f19c";
+      font-family: "Font Awesome 6 Free";
+    }
+
+    .data-box.lost::before {
+      opacity: 0.3;
+    }
+
+    .data-box.lost::after {
+      color: var(--error-color);
+    }
+
+    .data-box::after {
+      content: attr(data-type);
+      position: static;
+      font-size: 0.8em;
+      color: var(--primary-color);
+      margin-left: 35px;
+      white-space: nowrap;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 5px;
+      background: var(--primary-color);
+      z-index: 9998;
+      transition: width 1s linear, background 0.3s ease;
+      box-shadow: 0 0 10px var(--primary-color);
+    }
+    #tasks {
+      position: fixed;
+      top: 260px;
+      right: 20px;
+      background-color: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 8px 14px;
+      font-family: 'Fira Code', monospace;
+      font-size: 1em;
+      color: var(--primary-color);
+      z-index: 9999;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      width: 200px;
+    }
+    
+    .task-text {
+      font-size: 0.95em;
+      font-weight: bold;
+      text-align: center;
+      color: var(--primary-color);
+      margin-bottom: 8px;
+      display: block;
+    }
+    
+    .task-items {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .task-item {
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--primary-color);
+      padding: 8px 12px;
+      border-radius: 3px;
+      font-size: 0.9em;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .task-number {
+      color: var(--warning-color);
+      font-weight: bold;
+      background: rgba(255, 255, 0, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--warning-color);
+      font-size: 0.85em;
+    }
+    
+    .task-content {
+      flex: 1;
+    }
+    
+    .task-item:hover {
+      background-color: rgba(0, 255, 0, 0.1);
+      cursor: pointer;
+    }
+    .bluescreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #0000AA;
+      color: white;
+      font-family: 'Fira Code', monospace;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+      animation: flicker 0.5s infinite;
+    }
+
+    .bluescreen-content {
+      max-width: 600px;
+    }
+
+    .bluescreen-header {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #FFFFFF;
+    }
+
+    .bluescreen-body {
+      font-size: 18px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .bluescreen-progress {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      margin: 20px 0;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .bluescreen-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: white;
+      transition: width 0.1s linear;
+    }
+
+    .bluescreen-footer {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    @keyframes flicker {
+      0% { opacity: 1; }
+      50% { opacity: 0.8; }
+      100% { opacity: 1; }
+    }
+
+    #explosion {
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--error-color);
+      font-size: 2em;
+      font-family: 'Fira Code', monospace;
+      z-index: 9999;
+      animation: shake 0.5s infinite;
+      display: none;
+      text-shadow: 0 0 10px var(--error-color);
+    }
+
+    @keyframes shake {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      25% { transform: translate(-50%, -50%) rotate(-3deg); }
+      50% { transform: translate(-50%, -50%) rotate(3deg); }
+      75% { transform: translate(-50%, -50%) rotate(-3deg); }
+      100% { transform: translate(-50%, -50%) rotate(0deg); }
+    }
+
+    .command-history {
+      position: fixed;
+      bottom: 60px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .command-history.active {
+      display: block;
+    }
+
+    .success-message {
+      color: var(--success-color);
+      animation: fadeIn 0.5s ease;
+    }
+
+    .error-message {
+      color: var(--error-color);
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.9);
+      border: 1px solid var(--primary-color);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+    }
+
+    .matrix-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      background: linear-gradient(
+        rgba(0, 255, 0, 0.03) 50%,
+        transparent 50%
+      );
+      background-size: 100% 4px;
+      animation: matrix 0.5s linear infinite;
+    }
+
+    .scanline {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+      background: linear-gradient(
+        to bottom,
+        transparent 50%,
+        rgba(0, 255, 0, 0.02) 50%
+      );
+      background-size: 100% 4px;
+      animation: scan 8s linear infinite;
+    }
+
+    @keyframes matrix {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 4px; }
+    }
+
+    @keyframes scan {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 100%; }
+    }
+
+    .terminal-text {
+      position: relative;
+      display: inline-block;
+      text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    }
+
+    .terminal-text.active::after {
+      content: '|';
+      position: absolute;
+      right: -2px;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .success-text {
+      color: var(--success-color);
+      text-shadow: 0 0 5px var(--success-color);
+    }
+
+    .error-text {
+      color: var(--error-color);
+      text-shadow: 0 0 5px var(--error-color);
+    }
+
+    .warning-text {
+      color: var(--warning-color);
+      text-shadow: 0 0 5px var(--warning-color);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    #lives.warning {
+      animation: pulse 0.5s infinite;
+    }
+
+    .task-status {
+      position: fixed;
+      bottom: 430px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 8px 14px;
+      font-family: 'Fira Code', monospace;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      width: 200px;
+      z-index: 9999;
+    }
+
+    .task-progress {
+      margin-bottom: 5px;
+    }
+
+    .progress-text {
+      font-size: 0.9em;
+      margin-bottom: 5px;
+      color: var(--primary-color);
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 4px;
+      background: rgba(0, 255, 0, 0.2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--primary-color);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .current-task {
+      font-size: 0.9em;
+      color: var(--primary-color);
+      text-align: center;
+    }
+
+    .task-header {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-bottom: 10px;
+      text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+    }
+
+    .task-content {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      margin: 10px 0;
+    }
+
+    .warning-message {
+      color: var(--warning-color);
+      background: rgba(255, 255, 0, 0.1);
+      padding: 10px;
+      border: 1px solid var(--warning-color);
+      border-radius: 4px;
+      margin: 10px 0;
+      width: 100%;
+    }
+
+    .task-container {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid var(--primary-color);
+      border-radius: 4px;
+      width: 100%;
+    }
+/* Panel kapsayıcı */
+#task-panel {
+  position: fixed;
+  bottom: 300px;
+  right: 20px;
+  background-color: rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--primary-color);
+  padding: 12px 16px;
+  font-family: 'Fira Code', monospace;
+  font-size: 1em;
+  color: var(--primary-color);
+  z-index: 9999;
+  border-radius: 6px;
+  box-shadow: 0 0 12px rgba(0, 255, 0, 0.2);
+  width: 200px;
+
+  display: flex;
+  flex-direction: column;   /* Sütuna çevir */
+  align-items: center;      /* Yatayda ortala */
+  gap: 6px;                 /* Buton ile metin arası boşluk */
+}
+
+/* İpucu butonu */
+.hint-button {
+  background: transparent;
+  border: 1px solid var(--primary-color);
+  width: 100%;
+  padding: 8px 8px;
+  border-radius: 4px;
+  font-family: 'Fira Code', monospace;
+  font-size: 1.2em;
+  color: var(--primary-color);
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+.hint-button:hover {
+  background-color: rgba(0, 255, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Kırmızı uyarı metni */
+.leak-warning {
+  color: #ff4d4d;
+  font-size: 0.85em;
+  text-align: center;
+  margin: 0;   /* Fazla boşluğu kaldır */
+}
+
+    .error-message {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255, 0, 0, 0.1);
+      color: var(--error-color);
+      padding: 10px;
+      border: 1px solid var(--error-color);
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+      z-index: 9999;
+      width: 200px;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .last-life-warning {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 0, 0, 0.9);
+      color: white;
+      padding: 20px 40px;
+      border: 2px solid #ff0000;
+      border-radius: 8px;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      z-index: 9999;
+      animation: pulseWarning 0.5s infinite, fadeInOut 3s forwards;
+      box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+    }
+
+    @keyframes pulseWarning {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.1); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; }
+      20% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .hacked-profs {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 8px 14px;
+      font-family: 'Fira Code', monospace;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      width: 200px;
+      z-index: 9999;
+    }
+
+    .hacked-header {
+      color: var(--primary-color);
+      font-size: 1.1em;
+      text-align: center;
+      margin-bottom: 10px;
+      text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+    }
+
+    .hacked-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .hacked-item {
+      color: var(--success-color);
+      font-size: 0.9em;
+      padding: 5px;
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      border-radius: 3px;
+      text-align: center;
+      background: rgba(0, 255, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .hacked-item:hover {
+      background: rgba(0, 255, 0, 0.2);
+      transform: translateX(5px);
+    }
+
+    .nano-editor {
+      background: #000;
+      border: 1px solid var(--primary-color);
+      margin: 10px 0;
+      padding: 5px;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .editor-header {
+      color: var(--primary-color);
+      border-bottom: 1px solid var(--primary-color);
+      padding: 5px;
+      margin-bottom: 5px;
+    }
+
+    .editor-content {
+      white-space: pre;
+      padding: 5px;
+      min-height: 200px;
+      color: var(--text-color);
+    }
+
+    .editor-footer {
+      border-top: 1px solid var(--primary-color);
+      padding: 5px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--primary-color);
+    }
+
+    .cursor {
+      background: var(--primary-color);
+      color: #000;
+    }
+
+    .password-cracking-animation {
+      margin: 10px 0;
+      font-family: 'Fira Code', monospace;
+    }
+    
+    .password-attempt {
+      color: var(--text-color);
+      margin: 2px 0;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .password-attempt:last-child {
+      color: var(--success-color);
+      font-weight: bold;
+    }
+
+    .directory-listing {
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(0, 255, 0, 0.05);
+      border: 1px solid var(--primary-color);
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .file-item {
+      padding: 4px 8px;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(0, 255, 0, 0.1);
+    }
+
+    .file-item:last-child {
+      border-bottom: none;
+    }
+
+    .file-item[data-type="directory"] {
+      color: var(--primary-color);
+      font-weight: bold;
+    }
+
+    .file-item[data-type="file"] {
+      color: var(--text-color);
+    }
+
+    .file-item:hover {
+      background: rgba(0, 255, 0, 0.1);
+      cursor: pointer;
+    }
+    
+    .info-text {
+      color: var(--warning-color);
+      margin: 5px 0;
+      padding: 5px;
+      font-style: italic;
+    }
+
+    .hint-text {
+      color: var(--warning-color);
+      font-style: italic;
+      font-size: 0.9em;
+    }
+
+    .task-item {
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--primary-color);
+      padding: 8px 12px;
+      border-radius: 3px;
+      font-size: 0.9em;
+      color: var(--primary-color);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .task-number {
+      color: var(--warning-color);
+      font-weight: bold;
+      background: rgba(255, 255, 0, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--warning-color);
+    }
+
+    .task-content {
+      flex: 1;
+    }
+
+    .task-item:hover {
+      background-color: rgba(0, 255, 0, 0.1);
+      cursor: pointer;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+<div class="status-container">
+  <div class="status-item" id="timer">10:00</div>
+  <div class="status-item" id="lives">
+    <span class="data-text">Veriler Sızıyor:</span>
+    <div class="data-boxes">
+      <div class="data-box" data-type="WhatsApp"></div>
+      <div class="data-box" data-type="Instagram"></div>
+      <div class="data-box" data-type="Galeri"></div>
+      <div class="data-box" data-type="Rehber"></div>
+      <div class="data-box" data-type="Banka"></div>
+    </div>
+  </div>
+</div>
+<div id="tasks">
+  <span class="task-text">Aktif Görev:</span>
+  <div class="task-items" id="taskItems">
+    <div class="task-item">
+      <span class="task-content">Sunucudan veri çek</span>
+    </div>
+  </div>
+</div>
+<div class="task-status">
+  <div class="task-progress">
+    <div class="progress-text">Görev İlerlemesi</div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill"></div>
+    </div>
+  </div>
+  <div class="current-task">Görev 0/7</div>
+</div>
+
+<div id="task-panel">
+  <button class="hint-button">İpucu</button>
+  <p class="leak-warning">⚠️ Her iki ipucuda 1 veri sızdırılacak.</p>
+</div>
+
+
+<div class="hacked-profs">
+  <div class="hacked-header">Hedef Kurbanlar</div>
+  <div class="hacked-list">
+    <div class="hacked-item">A. Şenel</div>
+    <div class="hacked-item">S. Baydınar</div>
+    <div class="hacked-item">H. Boran</div>
+    <div class="hacked-item">E. Şafak</div>
+  </div>
+</div>
+
+<div class="progress-bar" id="progress"></div>
+<div id="explosion">💥 PATLAMA! Süre dolmak üzere!</div>
+<div id="terminal"></div>
+<div class="matrix-overlay"></div>
+<div class="scanline"></div>
+<div class="command-history" id="commandHistory"></div>
+<div class="command-hints" id="commandHints"></div>
+<input type="text" id="command" placeholder="komut girin..." autocomplete="off" autofocus>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  // Sayfa yüklendiğinde tüm geçmişi temizle
+  localStorage.clear();
+  sessionStorage.clear();
+  
+  const terminal = document.getElementById("terminal");
+  const input = document.getElementById("command");
+  const livesEl = document.getElementById("lives");
+  const timerEl = document.getElementById("timer");
+  const progressBar = document.getElementById("progress");
+  const explosion = document.getElementById("explosion");
+  const commandHistory = document.getElementById("commandHistory");
+  
+  // Komut geçmişini temizle
+  if (commandHistory) {
+    commandHistory.innerHTML = '';
+  }
+
+  let görevIndex = 0;
+  let veri = 5;
+  let kalanSaniye = 10 * 60;
+  let hızKatı = 1;
+  let commandHistoryIndex = -1;
+  let commandHistoryList = []; // Her sayfa yüklendiğinde boş başlar
+  let score = 0;
+  
+  // Komut geçmişini temizle
+  commandHistoryList = [];
+  commandHistoryIndex = -1;
+  let isEditorMode = false;
+  let currentEditorContent = '';
+  let currentCursorPosition = 0;
+  let timerInterval;
+  let ipucuSayisi = 0;
+
+  const ogreticiNotlar = [
+    "💡 DHCP komutu: 'dhcp-discover' ile başlar ve '--interface eth0' parametresi ile devam eder. Bu komut ağdaki DHCP sunucusundan IP adresi ister.",
+    "💡 Nmap ile ağ taraması yapmak için: 'nmap -sn [ağ_adresi]' formatını kullan. Örnek: nmap -sn 10.16.0.0/24",
+    "💡 Hydra ile parola kırmak için: 'hydra -l [kullanıcı] -P [wordlist] [servis]://[hedef]' formatını kullan.",
+    "💡 sshpass ile otomatik SSH bağlantısı için: 'sshpass -p [parola] ssh [kullanıcı]@[hedef]' formatını kullan.",
+    "💡 locate komutu ile dosya aramak için: 'locate [dosya_adı]' formatını kullan.",
+    "💡 nano editörü ile dosya düzenlemek için: 'nano [dosya_yolu]' formatını kullan. Kaydetmek için CTRL+O, çıkmak için CTRL+X",
+    "💡 Oturumu kapatmak için 'exit' komutunu kullan."
+  ];
+
+  const görevler = [
+    {
+      soru: ">> GÖREV #1: DÜZCE ÜNİVERSİTESİ yerel ağına sızmak için doğru DHCP komutunu gir.\n>> Komut: ________ --interface ______",
+      cevap: "dhcp-discover --interface eth0",
+      yanıt: "IP adresi alındı: 10.16.23.48  [✔]"
+    },
+    {
+      soru: ">> GÖREV #2: Yerel ağdaki cihazları tespit etmek için doğru Nmap komutunu gir.\n>> Komut: ________ -sn ______",
+      cevap: "nmap -sn 10.16.0.0/24",
+      yanıt: "Ağ taraması tamamlandı: 10.16.0.88 (t.timucin cihazı) bulundu.  [✔]"
+    },
+    {
+      soru: ">> GÖREV #3: SSH üzerinden hedef cihazda oturum açmak için doğru Hydra komutunu gir.\n>> Komut: hydra -l ______ -P ______ /usr/share/wordlists/deneneceksifreler.txt ssh://_____",
+      cevap: "hydra -l t.timucin -P /usr/share/wordlists/deneneceksifreler.txt ssh://10.16.0.88",
+      yanıt: "Parola bulundu: Tunahan.123  [✔]",
+      showPasswordCracking: true
+    },
+    {
+      soru: ">> GÖREV #4: Hedef cihazda SSH ile oturum açmak için sshpass kullanarak tek komutta bağlanın.\n>> Komut: ______",
+      cevap: "sshpass -p Tunahan.123 ssh t.timucin@10.16.0.88",
+      yanıt: "SSH bağlantısı kuruldu.  [✔]"
+    },
+    {
+      soru: ">> GÖREV #5: Hedef cihazda sınav notları dosyasını bulmak için:\n>> 1. Önce 'ls' komutu ile dosyaları listele\n>> 2. Sonra 'cd Documents' komutu ile Documents dizinine gir\n>> 3. Tekrar 'ls' yazarak dosyaları listele\n>> 4. Son olarak 'nano organizasyon_vize.txt' yazarak dosyayı aç\n>> Başlangıç konumu: /home/t.timucin",
+      cevap: "nano organizasyon_vize.txt",
+      yanıt: "Dosya başarıyla bulundu! Editör açılıyor... [✔]",
+      allowedCommands: ["cd", "ls", "nano"],
+      directories: {
+        "/home/t.timucin": ["Desktop", "Documents (Sınav notları burada olabilir)", "Downloads", "Pictures"],
+        "/home/t.timucin/Documents": ["organizasyon_vize.txt (Sınav notları dosyası)", "odevler", "notlar"],
+        "Documents": ["organizasyon_vize.txt (Sınav notları dosyası)", "odevler", "notlar"],
+        "documents": ["organizasyon_vize.txt (Sınav notları dosyası)", "odevler", "notlar"]  // Add lowercase variant
+      },
+      currentPath: "/home/t.timucin",
+      fileFound: false,
+      lsUsed: false,
+      cdDocuments: false,
+      documentsLsUsed: false // New flag to track ls usage in Documents directory
+    },
+    {
+      soru: ">> GÖREV #6: Sınav notlarını güncelleyelim!\n\n📝 Yapılacaklar:\n1. Açılan editörde öğrenci notlarını göreceksiniz\n2. Notları değiştirmek için klavyeyi kullanabilirsiniz\n3. Değişiklikleri kaydetmek için CTRL+O tuşlarına basın\n4. Editörden çıkmak için CTRL+X tuşlarına basın\n\n⚠️ Not: Editör içinde yön tuşlarıyla hareket edebilirsiniz",
+      cevap: "CTRL+X",
+      yanıt: "Notlar başarıyla güncellendi ve kaydedildi! [✔]",
+      editorContent: `# Organizasyon Vize Notları
+# Dosya: /home/t.timucin/Documents/organizasyon_vize.txt
+
+# Öğrenci Notları:
+1. Ali Yılmaz=65  
+2. Ayşe Demir=72  
+3. Mehmet Kaya=58  
+4. Zeynep Şahin=85  
+5. Can Öztürk=70  
+6. Deniz Yıldız=63  
+# ... diğer notlar ...
+
+# Not: Notları güncellemek için sayıları değiştirin
+# Kaydetmek için CTRL+O, çıkmak için CTRL+X tuşlarına basın`,
+      editorContent: `# Organizasyon Vize Notları
+# Dosya: /home/t.timucin/Documents/organizasyon_vize.txt
+
+# Öğrenci Notları:
+1. Ali Yılmaz=65  
+2. Ayşe Demir=72  
+3. Mehmet Kaya=58  
+4. Zeynep Şahin=85  
+5. Can Öztürk=70  
+6. Deniz Yıldız=63  
+7. Fatma Koç=78  
+8. Emre Arslan=92  
+9. Yunus Akıncı=40 
+10. Arif Yarencik =25
+11. Özlem Uçar=69  
+12. Berk Kaplan=74  
+13. Selin Tuna=88  
+14. Suat Çobankaya=59  
+15. Melis Kaya=93  
+16. Onur Yılmaz=67  
+17. Tuğçe Akın=79  
+18. Enes Güçlü = 22  
+19. Gökhan Acar=77  
+20. Elvan Tekin=66  
+21. Sinem Arı=90  
+22. Kaan Demirci=55  
+23. Derya Uysal=82  
+24. Tolga Ergin=61  
+25. Büşra Çetin=94  
+26. Seçkin Yılmaz=73  
+27. Rabia Kara=68  
+28. Cihan Altun=88  
+29. Nisanur Kaplan=60  
+30. Barış Şen=79  
+31. Eren Kablan=30 
+32. Efe Yıldırım=68  
+33. Dilan Aydın=74  
+34. Emir Demirel=88  
+35. Dilara Güneş=64  
+36. Ozan Kurt=79  
+37. Merve Özkan=57  
+38. Fırat Şahin=83  
+39. Şeyma Demirtaş=90  
+40. Kemal Can=52  
+
+# Not: Notları güncellemek için yukarı/aşağı ok tuşları ile hareket edin
+#      Değişiklik yapmak için sayıları düzenleyin
+#      Kaydetmek için CTRL+O, çıkmak için CTRL+X
+
+^G Yardım    ^O Kaydet    ^W Ara        ^K Kes        ^X Çıkış
+^X Dosyadan Çıkış`,
+      editorMode: true
+    },
+    {
+      soru: ">> GÖREV #7: Hedef cihazdaki sadece t.timucin oturum kayıtlarını log dosyalarından silmek için doğru komutu gir.\n>> Komut: sed ________ ________ ________",
+      cevap: "sed '/t\\.timucin/d' /var/log/auth.log /var/log/secure",
+      yanıt: "Yalnızca 't.timucin' kayıtları silindi; diğer loglar dokunulmadı.  [✔]"
+    }
+  ];
+
+  const extraKomutlar = {
+    "görevi tekrar et": () => görevler[görevIndex]?.soru || "Tüm görevler bitti.",
+    "ipucu": () => {
+      ipucuSayisi++;
+      if (ipucuSayisi % 2 === 0) {
+        veri--;
+        güncelleVeri();
+        return `📌 İpucu: ${ogreticiNotlar[görevIndex]}\n⚠️ Not: 2 ipucu aldığın için 1 veri sızdırıldı. Kalan veri: ${veri}`;
+      }
+      return `📌 İpucu: ${ogreticiNotlar[görevIndex]}\n⚠️ Not: Bir ipucu daha alırsan 1 veri sızdırılacak.`;
+    }
+  };
+
+  // Komut ipuçları
+  const commandHints = {
+    'dhcp-discover': 'Ağ arayüzü üzerinden DHCP keşfi başlatır',
+    'nmap': 'Ağ tarama aracı',
+    'hydra': 'Parola kırma aracı',
+    'sshpass': 'SSH parola ile otomatik giriş',
+    'locate': 'Dosya arama komutu',
+    'nano': 'Metin editörü',
+    'ipucu': 'Mevcut görev için ipucu al',
+    'görevi tekrar et': 'Mevcut görevi tekrar göster'
+  };
+
+  // Komut geçmişi yönetimi
+  function addToHistory(command) {
+    if (command && command !== commandHistoryList[0]) {
+      commandHistoryList.unshift(command);
+      if (commandHistoryList.length > 10) {
+        commandHistoryList.pop();
+      }
+      updateCommandHistory();
+    }
+  }
+
+  function updateCommandHistory() {
+    const historyEl = document.getElementById('commandHistory');
+    historyEl.innerHTML = commandHistoryList
+      .map(cmd => `<div class="history-item">${cmd}</div>`)
+      .join('');
+  }
+
+  // Komut otomatik tamamlama
+  function getCommandSuggestions(input) {
+    const suggestions = [
+      'dhcp-discover',
+      'nmap',
+      'hydra',
+      'sshpass',
+      'locate',
+      'nano',
+      'ipucu',
+      'görevi tekrar et'
+    ];
+    return suggestions.filter(cmd => cmd.startsWith(input.toLowerCase()));
+  }
+
+  // Animasyonlu mesaj gösterimi
+  function showAnimatedMessage(message, type = 'info') {
+    const messageEl = document.createElement('div');
+    messageEl.className = `message ${type}-message`;
+    messageEl.textContent = message;
+    terminal.appendChild(messageEl);
+    terminal.scrollTop = terminal.scrollHeight;
+    
+    setTimeout(() => {
+      messageEl.style.opacity = '0';
+      setTimeout(() => messageEl.remove(), 500);
+    }, 3000);
+  }
+
+  // Tooltip gösterimi
+  function showTooltip(element, text) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    tooltip.textContent = text;
+    document.body.appendChild(tooltip);
+
+    const rect = element.getBoundingClientRect();
+    tooltip.style.top = `${rect.bottom + 5}px`;
+    tooltip.style.left = `${rect.left}px`;
+    tooltip.classList.add('visible');
+
+    setTimeout(() => {
+      tooltip.classList.remove('visible');
+      setTimeout(() => tooltip.remove(), 300);
+    }, 2000);
+  }
+
+  function güncelleVeri() {
+    const dataText = document.createElement('span');
+    dataText.className = 'data-text';
+    dataText.textContent = 'Veriler Sızıyor:';
+    
+    const dataBoxes = document.createElement('div');
+    dataBoxes.className = 'data-boxes';
+    
+    const veriTipleri = ['WhatsApp', 'Instagram', 'Galeri', 'Rehber', 'Banka'];
+    
+    for (let i = 0; i < 5; i++) {
+      const box = document.createElement('div');
+      box.className = 'data-box';
+      if (i >= veri) {
+        box.classList.add('lost');
+        box.setAttribute('data-type', veriTipleri[i] + ' sızdırıldı');
+      } else {
+        box.setAttribute('data-type', veriTipleri[i]);
+      }
+      dataBoxes.appendChild(box);
+    }
+    
+    livesEl.innerHTML = '';
+    livesEl.appendChild(dataText);
+    livesEl.appendChild(dataBoxes);
+
+    if (veri <= 2) {
+      livesEl.style.color = "red";
+      livesEl.classList.add('warning');
+    } else {
+      livesEl.style.color = "#00FF00";
+      livesEl.classList.remove('warning');
+    }
+    if (veri === 1) {
+      const warningDiv = document.createElement('div');
+      warningDiv.className = 'last-life-warning';
+      warningDiv.innerHTML = '⚠️ SON VERİ!<br>DİKKATLİ OL!';
+      document.body.appendChild(warningDiv);
+      
+      setTimeout(() => {
+        warningDiv.remove();
+      }, 3000);
+    }
+  }
+
+  function maviEkran() {
+    const bluescreen = document.createElement('div');
+    bluescreen.className = 'bluescreen';
+    bluescreen.innerHTML = `
+      <div class="bluescreen-content">
+        <div class="bluescreen-header">*** STOP: 0x000000D3 (VERI_SIZINTISI)</div>
+        <div class="bluescreen-body">
+          <p>Tüm verileriniz sızdırıldı!</p>
+          <p>Hacker tüm verilerinize erişti...</p>
+          <div class="bluescreen-progress">
+            <div class="bluescreen-progress-bar"></div>
+          </div>
+          <p class="bluescreen-footer">Sistem güvenliği ihlal edildi. Yeniden başlatılıyor...</p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(bluescreen);
+
+    // Mavi ekran animasyonu
+    const progressBar = bluescreen.querySelector('.bluescreen-progress-bar');
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 1;
+      progressBar.style.width = `${progress}%`;
+      if (progress >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          document.body.style.backgroundColor = '#0000AA';
+          bluescreen.style.opacity = '0';
+          setTimeout(() => {
+            document.body.innerHTML = '<div class="bluescreen">Sistem yeniden başlatılıyor...</div>';
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          }, 1000);
+        }, 1000);
+      }
+    }, 50);
+  }
+
+  // Terminal metin animasyonu için yardımcı fonksiyon
+  function typeText(element, text, speed = 50) {
+    let i = 0;
+    element.innerHTML = '';
+    const span = document.createElement('span');
+    span.className = 'terminal-text';
+    element.appendChild(span);
+
+    function type() {
+      if (i < text.length) {
+        span.textContent += text.charAt(i);
+        i++;
+        setTimeout(type, speed);
+      } else {
+        span.classList.remove('active');
+      }
+    }
+    span.classList.add('active');
+    type();
+  }
+
+  // Mevcut terminal.innerHTML atamalarını güncelle
+  function updateTerminal(text, type = 'normal') {
+    const div = document.createElement('div');
+    div.className = `terminal-text ${type}-text`;
+    
+    if (text.includes('GÖREV #')) {
+      const parts = text.split('\n');
+      const header = parts[0];
+      const content = parts.slice(1).join('\n');
+      
+      div.innerHTML = `
+        <div class="task-container">
+          <div class="task-header">${header}</div>
+          <div class="task-content">${content}</div>
+        </div>
+      `;
+      terminal.appendChild(div);
+    } else if (type === 'warning') {
+      div.innerHTML = `<div class="warning-message">${text}</div>`;
+      terminal.appendChild(div);
+    } else {
+      div.textContent = text;
+      terminal.appendChild(div);
+      typeText(div, text);
+    }
+    
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  // Başlangıç mesajını güncelle
+  terminal.innerHTML = '';
+  const startDiv = document.createElement('div');
+  startDiv.innerHTML = '>> DİKKAT! Verileriniz sızmaya başladı!<br>Her yanlış komutta bir veri sızdırılacak.';
+  startDiv.className = 'warning-text';
+  terminal.appendChild(startDiv);
+
+  const taskDiv = document.createElement('div');
+  taskDiv.innerHTML = görevler[görevIndex].soru;
+  taskDiv.className = 'task-container';
+  terminal.appendChild(taskDiv);
+
+  // Yapay zeka cevapları
+  const aiCevaplar = {
+    dhcp: [
+      "⚠️ UYARI: Verileriniz hızla sızıyor! DHCP komutunu doğru girmelisin!",
+      "🚨 KRİTİK: Her yanlış denemede bir veri daha kaybediyorsun!",
+      "💀 TEHLİKE: Zaman azalıyor ve verilerin sızıyor! Doğru komutu bul!",
+      "⚡ ACİL: Sistem güvenliği tehlike altında! Doğru DHCP komutunu gir!"
+    ],
+    kullanici: [
+      "🔥 YANLIŞ: Her saniye verilerin sızıyor! Kullanıcı adını doğru gir!",
+      "⚡ KRİTİK: Sistem alarm veriyor! Doğru kullanıcı bilgilerini gir!",
+      "💀 TEHLİKE: Verilerin hızla kayboluyor! Kullanıcı adını kontrol et!",
+      "🚨 UYARI: Güvenlik duvarı seni tespit etti! Hemen doğru bilgileri gir!"
+    ],
+    find: [
+      "⚠️ ACİL: Dosya bulunamadı! Verilerin sızmaya devam ediyor!",
+      "💀 TEHLİKE: Her yanlış denemede bir veri daha kaybediyorsun!",
+      "🚨 KRİTİK: Sistem seni tespit etti! Doğru dosya yolunu bul!",
+      "⚡ UYARI: Zaman azalıyor! Doğru locate komutunu gir!"
+    ],
+    scp: [
+      "🔥 YANLIŞ: Verilerin hızla sızıyor! Doğru SCP komutunu gir!",
+      "💀 TEHLİKE: Her saniye bir veri daha kaybediyorsun!",
+      "🚨 KRİTİK: Sistem alarm veriyor! Doğru transfer komutunu kullan!",
+      "⚡ ACİL: Güvenlik duvarı seni tespit etti! Hemen doğru komutu gir!"
+    ],
+    sed: [
+      "⚠️ UYARI: Log dosyaları hala duruyor! Doğru sed komutunu gir!",
+      "💀 TEHLİKE: İzlerin silinmedi! Hemen doğru komutu bul!",
+      "🚨 KRİTİK: Sistem seni tespit etti! Doğru silme komutunu kullan!",
+      "⚡ ACİL: Zaman azalıyor! Doğru sed komutunu gir!"
+    ],
+    rm: [
+      "🔥 YANLIŞ: Log dosyaları hala duruyor! Doğru silme komutunu gir!",
+      "💀 TEHLİKE: İzlerin silinmedi! Hemen doğru komutu bul!",
+      "🚨 KRİTİK: Sistem seni tespit etti! Doğru rm komutunu kullan!",
+      "⚡ ACİL: Zaman azalıyor! Doğru silme komutunu gir!"
+    ],
+    genel: [
+      "💀 TEHLİKE: Her yanlış denemede bir veri daha kaybediyorsun!",
+      "🚨 KRİTİK: Sistem seni tespit etti! Doğru komutu bul!",
+      "⚡ ACİL: Zaman azalıyor! Doğru komutu gir!",
+      "🔥 YANLIŞ: Verilerin hızla sızıyor! Doğru komutu bul!"
+    ]
+  };
+
+  // Son kullanılan cevapları takip etmek için
+  const sonKullanilanCevaplar = {};
+
+  // Rastgele cevap seçme fonksiyonu (tekrar etmeyecek şekilde)
+  function rastgeleCevap(dizi, tip) {
+    if (!sonKullanilanCevaplar[tip]) {
+      sonKullanilanCevaplar[tip] = [];
+    }
+
+    if (sonKullanilanCevaplar[tip].length >= dizi.length) {
+      sonKullanilanCevaplar[tip] = [];
+    }
+
+    const kullanilabilirCevaplar = dizi.filter(cevap => 
+      !sonKullanilanCevaplar[tip].includes(cevap)
+    );
+
+    const secilenCevap = kullanilabilirCevaplar[
+      Math.floor(Math.random() * kullanilabilirCevaplar.length)
+    ];
+
+    sonKullanilanCevaplar[tip].push(secilenCevap);
+    return secilenCevap;
+  }
+
+  // Yapay zeka yardımcı fonksiyonu
+  function aiYardimci(komut) {
+    const komutTipleri = {
+      'dhcp': 'dhcp',
+      't.timucin': 'kullanici',
+      'find': 'find',
+      'scp': 'scp',
+      'sed': 'sed',
+      'rm': 'rm'
+    };
+
+    // Komut tipini belirle
+    let tip = 'genel';
+    for (const [anahtar, deger] of Object.entries(komutTipleri)) {
+      if (komut.includes(anahtar)) {
+        tip = deger;
+        break;
+      }
+    }
+
+    // Görev bazlı özel durumlar
+    if (tip === 'genel') {
+      const görevTipleri = ['dhcp', 'kullanici', 'find', 'scp', 'rm'];
+      tip = görevTipleri[görevIndex] || 'genel';
+    }
+
+    return rastgeleCevap(aiCevaplar[tip], tip);
+  }
+
+  // Terminal editörü için yeni fonksiyonlar ekleyelim
+  function showNanoEditor(content) {
+    const editorDiv = document.createElement('div');
+    editorDiv.className = 'nano-editor';
+    editorDiv.innerHTML = `
+      <div class="editor-header">
+        <span>GNU nano 6.2</span>
+        <span class="file-info">File: /home/t.timucin/Documents/organizasyon_vize.txt</span>
+      </div>
+      <div class="editor-content" contenteditable="true" spellcheck="false"></div>
+      <div class="editor-instructions">
+        <div class="instruction-item">💡 Yön tuşlarıyla hareket edin</div>
+        <div class="instruction-item">💾 CTRL+O ile kaydedin</div>
+        <div class="instruction-item">❌ CTRL+X ile çıkın</div>
+      </div>
+      <div class="editor-footer">
+        <span>^G Yardım</span>
+        <span>^O Kaydet</span>
+        <span>^W Ara</span>
+        <span>^K Kes</span>
+        <span>^X Çıkış</span>
+      </div>
+    `;
+    terminal.appendChild(editorDiv);
+    
+    const editorContent = editorDiv.querySelector('.editor-content');
+    editorContent.textContent = content;
+    
+    // Activate editor mode
+    isEditorMode = true;
+    currentEditorContent = content;
+    
+    // Add editor styles
+    const style = document.createElement('style');
+    style.textContent = `
+      .nano-editor {
+        background: #000;
+        border: 1px solid var(--primary-color);
+        margin: 10px 0;
+        padding: 5px;
+        font-family: 'Fira Code', monospace;
+      }
+      
+      .editor-header {
+        color: var(--primary-color);
+        border-bottom: 1px solid var(--primary-color);
+        padding: 5px;
+        margin-bottom: 5px;
+        display: flex;
+        justify-content: space-between;
+      }
+      
+      .file-info {
+        color: var(--warning-color);
+      }
+      
+      .editor-content {
+        white-space: pre;
+        padding: 10px;
+        min-height: 300px;
+        color: var(--text-color);
+        outline: none;
+        caret-color: var(--primary-color);
+        line-height: 1.4;
+      }
+      
+      .editor-content:focus {
+        box-shadow: 0 0 5px var(--primary-color);
+      }
+      
+      .editor-instructions {
+        padding: 10px;
+        background: rgba(0, 255, 0, 0.1);
+        border: 1px solid var(--primary-color);
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+      
+      .instruction-item {
+        color: var(--warning-color);
+        margin: 5px 0;
+        font-size: 0.9em;
+      }
+      
+      .editor-footer {
+        border-top: 1px solid var(--primary-color);
+        padding: 5px;
+        display: flex;
+        justify-content: space-between;
+        color: var(--primary-color);
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Handle editor keyboard events
+    editorContent.addEventListener('input', (e) => {
+      currentEditorContent = e.target.textContent;
+    });
+
+    editorContent.addEventListener('keydown', (e) => {
+      if (e.ctrlKey) {
+        if (e.key === 'o') {
+          e.preventDefault();
+          saveFile();
+          const saveMsg = document.createElement('div');
+          saveMsg.className = 'success-text';
+          saveMsg.innerHTML = '💾 Dosya başarıyla kaydedildi!';
+          terminal.appendChild(saveMsg);
+        } else if (e.key === 'x') {
+          e.preventDefault();
+          exitEditor();
+          const exitMsg = document.createElement('div');
+          exitMsg.className = 'success-text';
+          exitMsg.innerHTML = '✨ Editör kapatıldı. Değişiklikler kaydedildi.';
+          terminal.appendChild(exitMsg);
+          
+          // Show next task if available
+          görevIndex++;
+          updateTaskStatus();
+          if (görevIndex < görevler.length) {
+            const nextTaskDiv = document.createElement('div');
+            nextTaskDiv.innerHTML = görevler[görevIndex].soru;
+            nextTaskDiv.className = 'task-container';
+            terminal.appendChild(nextTaskDiv);
+          }
+        }
+      }
+    });
+
+    // Focus on editor
+    editorContent.focus();
+  }
+
+  function saveFile() {
+    const successDiv = document.createElement('div');
+    successDiv.innerHTML = 'Dosya kaydedildi: /home/t.timucin/Documents/organizasyon_vize.txt';
+    successDiv.className = 'success-text';
+    terminal.appendChild(successDiv);
+  }
+
+  function exitEditor() {
+    isEditorMode = false;
+    const editorDiv = document.querySelector('.nano-editor');
+    if (editorDiv) {
+      editorDiv.remove();
+    }
+    
+    // Show success message for Task 6
+    const successDiv = document.createElement('div');
+    successDiv.innerHTML = görevler[görevIndex].yanıt;
+    successDiv.className = 'success-text';
+    terminal.appendChild(successDiv);
+    
+    // Show Task 7 without incrementing görevIndex or updating progress
+    const nextTaskDiv = document.createElement('div');
+    nextTaskDiv.innerHTML = görevler[6].soru;
+    nextTaskDiv.className = 'task-container';
+    terminal.appendChild(nextTaskDiv);
+    
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  // Parola kırma animasyonu için yeni fonksiyon
+  function showPasswordCrackingAnimation() {
+    const passwords = [
+      "TunahanTimucin",
+      "TimucinTunahan",
+      "Tunahan1234",
+      "Timucin1234",
+      "TTimucin!",
+      "Timuçin!",
+      "Tunahan!",
+      "Tunahan_07",
+      "Timucin_07",
+      "Tunahan0712",
+      "Timucin0712",
+      "TunahanDÜ",
+      "TimuçinDÜ",
+      "DÜTunahan",
+      "DÜTimucin",
+      "TunahanDU07",
+      "TimucinDU07",
+      "TunahanPass",
+      "PassTunahan",
+      "TunahanPwd",
+      "TimucinPwd",
+      "TunahanSifre",
+      "TimucinSifre",
+      "TunahanSifre07",
+      "TimucinSifre07",
+      "TunahanTT07",
+      "TT07!",
+      "TimuDÜ07",
+      "Tunahan07!",
+      "TTimucin1905",
+      "Timuçin1905",
+      "Tunahan1905!",
+      "Timucin1905!",
+      "TunahanGüvenlik",
+      "TimucinGüvenlik",
+      "TunahanAdmin",
+      "TimucinAdmin",
+      "TunahanRoot",
+      "TimucinRoot",
+      "Tunahan.123"
+    ];
+
+    const animationDiv = document.createElement('div');
+    animationDiv.className = 'password-cracking-animation';
+    terminal.appendChild(animationDiv);
+
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      if (currentIndex < passwords.length) {
+        const attemptDiv = document.createElement('div');
+        attemptDiv.className = 'password-attempt';
+        attemptDiv.innerHTML = `Deneniyor: ${passwords[currentIndex]}`;
+        animationDiv.appendChild(attemptDiv);
+        terminal.scrollTop = terminal.scrollHeight;
+        currentIndex++;
+      } else {
+        clearInterval(interval);
+        const successDiv = document.createElement('div');
+        successDiv.className = 'success-text';
+        successDiv.innerHTML = 'Parola bulundu: Tunahan.123  [✔]';
+        animationDiv.appendChild(successDiv);
+        
+        const learnDiv = document.createElement('div');
+        learnDiv.innerHTML = `📘 Öğren: ${ogreticiNotlar[görevIndex]}`;
+        learnDiv.className = 'warning-text';
+        animationDiv.appendChild(learnDiv);
+        
+        görevIndex++;
+        updateTaskStatus();
+        
+        if (görevIndex < görevler.length) {
+          const nextTaskDiv = document.createElement('div');
+          nextTaskDiv.innerHTML = görevler[görevIndex].soru;
+          nextTaskDiv.className = 'task-container';
+          terminal.appendChild(nextTaskDiv);
+        }
+      }
+    }, 200);
+  }
+
+  // Görev durumu güncelleme
+  function updateTaskStatus() {
+    const progress = (görevIndex / görevler.length) * 100;
+    const progressBarFill = document.querySelector('.progress-bar-fill');
+    const currentTask = document.querySelector('.current-task');
+    
+    if (progressBarFill) {
+      progressBarFill.style.width = `${progress}%`;
+    }
+    
+    if (currentTask) {
+      currentTask.textContent = `Görev ${görevIndex}/${görevler.length}`;
+    }
+
+    // Only show congratulations after Task 7 is completed successfully
+    if (görevIndex >= görevler.length && veri > 0) {
+      clearInterval(timerInterval);
+      const congratsDiv = document.createElement('div');
+      congratsDiv.className = 'success-text';
+      congratsDiv.innerHTML = `
+        <div style="text-align: center; margin: 20px 0;">
+          <h2 style="color: #00FF00; text-shadow: 0 0 10px #00FF00;">🎉 TEBRİKLER! 🎉</h2>
+          <p style="font-size: 1.2em;">Tüm görevleri başarıyla tamamladın!</p>
+          <p style="font-size: 1.1em;">🔥 Sistem güvenliğini tamamen çökerttin! 🔥</p>
+          <p style="font-size: 1.1em;">Kalan süre: ${Math.floor(kalanSaniye / 60)}:${(kalanSaniye % 60).toString().padStart(2, '0')}</p>
+          <p style="font-size: 1.1em;">Kalan veri: ${veri}</p>
+        </div>
+      `;
+      terminal.appendChild(congratsDiv);
+      input.disabled = true;
+    }
+  }
+
+  // Başlangıçta görev durumunu güncelle
+  updateTaskStatus();
+
+  // Dizin içeriğini gösterme fonksiyonu
+  function showDirectoryContents(path) {
+    const aktifGörev = görevler[görevIndex];
+    if (!aktifGörev || !aktifGörev.directories) return;
+
+    // Normalize path handling
+    let normalizedPath = path.toLowerCase().replace(/\\/g, '/');
+    
+    // Check both the full path and the simple directory name
+    let contents = aktifGörev.directories[normalizedPath] || 
+                  aktifGörev.directories[normalizedPath.split('/').pop()] ||
+                  aktifGörev.directories['/home/t.timucin/Documents'];
+    
+    if (contents) {
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'directory-listing';
+      contentDiv.innerHTML = contents.map(item => {
+        const isDirectory = !item.includes('.');
+        const icon = isDirectory ? '📁' : '📄';
+        const name = item.replace(/\s*\([^)]*\)/, '');
+        return `<div class="file-item" data-type="${isDirectory ? 'directory' : 'file'}">
+          ${icon} ${name}${isDirectory ? '/' : ''}
+        </div>`;
+      }).join('\n');
+      terminal.appendChild(contentDiv);
+      terminal.scrollTop = terminal.scrollHeight;
+    } else {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-text';
+      errorDiv.textContent = 'Dizin bulunamadı. "ls" komutu ile mevcut dizindeki dosyaları listeleyin.';
+      terminal.appendChild(errorDiv);
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+  }
+
+  input.addEventListener("keydown", (e) => {
+    if (isEditorMode) {
+      handleEditorKeyPress(e);
+      return;
+    }
+    if (e.ctrlKey && e.key === 'g') {
+      e.preventDefault();
+      const aktifGörev = görevler[görevIndex];
+      if (aktifGörev) {
+        input.value = aktifGörev.cevap;
+        const warningDiv = document.createElement('div');
+        warningDiv.innerHTML = '⚠️ DİKKAT: Görev otomatik tamamlandı!';
+        warningDiv.className = 'warning-text';
+        terminal.appendChild(warningDiv);
+      }
+      return;
+    }
+    if (e.key === "Enter") {
+      const komut = input.value.trim().toLowerCase().replace(/[üu]/g, 'u').replace(/[ıi]/g, 'i');
+      
+      const commandDiv = document.createElement('div');
+      commandDiv.innerHTML = `> ${komut}`;
+      commandDiv.className = 'terminal-text normal-text';
+      commandDiv.style.marginLeft = '20px';
+      terminal.appendChild(commandDiv);
+      
+      input.value = "";
+
+      const aktifGörev = görevler[görevIndex];
+
+      // Görev 5 için özel kontrol
+      if (aktifGörev && görevIndex === 4) {
+        if (!aktifGörev.allowedCommands.includes(komut.split(' ')[0])) {
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-text';
+          errorDiv.innerHTML = `❌ Geçersiz komut! Kullanabileceğiniz komutlar: ${aktifGörev.allowedCommands.join(', ')}`;
+          terminal.appendChild(errorDiv);
+          veri--;
+          güncelleVeri();
+          return;
+        }
+
+        if (komut === 'ls') {
+          const pathDiv = document.createElement('div');
+          pathDiv.className = 'info-text';
+          pathDiv.innerHTML = `📂 Mevcut konum: ${aktifGörev.currentPath}`;
+          terminal.appendChild(pathDiv);
+          
+          showDirectoryContents(aktifGörev.currentPath);
+          aktifGörev.lsUsed = true;
+          if (aktifGörev.currentPath === '/home/t.timucin/Documents') {
+            aktifGörev.documentsLsUsed = true;
+          }
+          return;
+        } 
+        else if (komut.startsWith('cd ')) {
+          if (!aktifGörev.lsUsed) {
+            const warningDiv = document.createElement('div');
+            warningDiv.className = 'warning-text';
+            warningDiv.innerHTML = '⚠️ İpucu: Önce "ls" komutu ile dosyaları listeleyin!';
+            terminal.appendChild(warningDiv);
+            return;
+          }
+
+          const targetPath = komut.substring(3).trim().toLowerCase();
+          if (targetPath === 'documents' || targetPath === '/home/t.timucin/documents') {
+            aktifGörev.currentPath = '/home/t.timucin/Documents';
+            aktifGörev.cdDocuments = true;
+            aktifGörev.documentsLsUsed = false; // Reset ls flag for Documents directory
+            const successDiv = document.createElement('div');
+            successDiv.innerHTML = `📂 Documents dizinine girildi.`;
+            successDiv.className = 'success-text';
+            terminal.appendChild(successDiv);
+          } else {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-text';
+            errorDiv.innerHTML = `
+              ❌ Yanlış dizin. 
+              💡 İpucu: Sınav notlarının Documents dizininde olduğu söylendi.
+              📝 Kullanın: cd Documents
+            `;
+            terminal.appendChild(errorDiv);
+            veri--;
+            güncelleVeri();
+          }
+          return;
+        }
+        else if (komut.startsWith('nano ')) {
+          if (!aktifGörev.cdDocuments) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-text';
+            errorDiv.innerHTML = `
+              ❌ Yanlış dizin! 
+              💡 İpucu: Önce "cd Documents" ile Documents dizinine gitmelisiniz.
+            `;
+            terminal.appendChild(errorDiv);
+            veri--;
+            güncelleVeri();
+            return;
+          }
+
+          if (!aktifGörev.documentsLsUsed) {
+            const warningDiv = document.createElement('div');
+            warningDiv.className = 'warning-text';
+            warningDiv.innerHTML = '⚠️ İpucu: Documents dizinine girdikten sonra "ls" komutu ile dosyaları listelemelisiniz!';
+            terminal.appendChild(warningDiv);
+            veri--;
+            güncelleVeri();
+            return;
+          }
+
+          const fileName = komut.substring(5).trim().toLowerCase();
+          if (fileName === 'organizasyon_vize.txt' && aktifGörev.currentPath === '/home/t.timucin/Documents') {
+            const successDiv = document.createElement('div');
+            successDiv.innerHTML = aktifGörev.yanıt;
+            successDiv.className = 'success-text';
+            terminal.appendChild(successDiv);
+            
+            // Transition to Task 6 and show editor
+            görevIndex++;
+            updateTaskStatus();
+            
+            // Show new task description
+            const taskDiv = document.createElement('div');
+            taskDiv.innerHTML = görevler[görevIndex].soru;
+            taskDiv.className = 'task-container';
+            terminal.appendChild(taskDiv);
+            
+            // Open editor with content
+            showNanoEditor(görevler[görevIndex].editorContent);
+          } else {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-text';
+            errorDiv.innerHTML = `
+              ❌ Dosya bulunamadı! 
+              💡 İpucu: "ls" ile dosyaları listeleyin ve doğru dosya adını kullanın.
+              📝 Doğru dosya adı: organizasyon_vize.txt
+            `;
+            terminal.appendChild(errorDiv);
+            veri--;
+            güncelleVeri();
+          }
+          return;
+        }
+      }
+      
+      if (aktifGörev && komut === aktifGörev.cevap.toLowerCase()) {
+        if (aktifGörev.showPasswordCracking) {
+          showPasswordCrackingAnimation();
+        } else if (aktifGörev.editorMode) {
+          showNanoEditor(aktifGörev.editorContent);
+        } else {
+          const successDiv = document.createElement('div');
+          successDiv.innerHTML = aktifGörev.yanıt;
+          successDiv.className = 'success-text';
+          terminal.appendChild(successDiv);
+
+          const learnDiv = document.createElement('div');
+          learnDiv.innerHTML = `📘 Öğren: ${ogreticiNotlar[görevIndex]}`;
+          learnDiv.className = 'warning-text';
+          terminal.appendChild(learnDiv);
+
+          görevIndex++;
+          updateTasks(); // Görev tamamlandığında görevleri güncelle
+          updateTaskStatus();
+          
+          if (görevIndex < görevler.length) {
+            const nextTaskDiv = document.createElement('div');
+            nextTaskDiv.innerHTML = görevler[görevIndex].soru;
+            nextTaskDiv.className = 'task-container';
+            terminal.appendChild(nextTaskDiv);
+          }
+        }
+      } else if (komut in extraKomutlar) {
+        const yanıt = typeof extraKomutlar[komut] === "function" ? extraKomutlar[komut]() : extraKomutlar[komut];
+        const aiDiv = document.createElement('div');
+        aiDiv.innerHTML = `AI >> ${yanıt}`;
+        aiDiv.className = 'normal-text';
+        terminal.appendChild(aiDiv);
+      } else {
+        veri--;
+        güncelleVeri();
+        if (veri <= 0) {
+          maviEkran();
+          input.disabled = true;
+          return;
+        }
+        // Yapay zeka yardımı
+        const aiYanit = aiYardimci(komut);
+        const aiDiv = document.createElement('div');
+        aiDiv.innerHTML = aiYanit;
+        aiDiv.className = 'normal-text';
+        terminal.appendChild(aiDiv);
+
+        // Hata mesajını ve kalan veriyi göster
+        const errorDiv = document.createElement('div');
+        errorDiv.innerHTML = `Veri sızdırıldı.<br>Kalan veri: ${veri}`;
+        errorDiv.className = 'error-text';
+        terminal.appendChild(errorDiv);
+      }
+      terminal.scrollTop = terminal.scrollHeight;
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (commandHistoryIndex < commandHistoryList.length - 1) {
+        commandHistoryIndex++;
+        input.value = commandHistoryList[commandHistoryIndex];
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (commandHistoryIndex > 0) {
+        commandHistoryIndex--;
+        input.value = commandHistoryList[commandHistoryIndex];
+      } else {
+        commandHistoryIndex = -1;
+        input.value = "";
+      }
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      const value = input.value.toLowerCase();
+      const matches = Object.keys(commandHints)
+        .filter(cmd => cmd.toLowerCase().startsWith(value));
+      
+      if (matches.length === 1) {
+        input.value = matches[0];
+      } else if (matches.length > 1) {
+        showCommandHints(input);
+      }
+    }
+  });
+
+  // Timer'ı başlat
+  timerInterval = setInterval(() => {
+    kalanSaniye -= hızKatı;
+    if (kalanSaniye <= 0) {
+      timerEl.textContent = "SÜRE BİTTİ";
+      terminal.innerHTML += "\n\n>> [!] Süre doldu. Görev başarısız.";
+      input.disabled = true;
+      clearInterval(timerInterval); // Timer'ı durdur
+      return;
+    }
+
+    explosion.style.display = kalanSaniye <= 10 ? 'block' : 'none';
+
+    const dk = String(Math.floor(kalanSaniye / 60)).padStart(2, '0');
+    const sn = String(kalanSaniye % 60).padStart(2, '0');
+    timerEl.textContent = `${dk}:${sn}`;
+
+    // Update progress bar
+    const oran = kalanSaniye / (10 * 60);
+    progressBar.style.width = `${oran * 100}%`;
+    
+    // Update timer colors based on remaining time
+    if (oran < 0.2) {
+      progressBar.style.background = "red";
+      timerEl.style.color = "red";
+    } else if (oran < 0.5) {
+      progressBar.style.background = "yellow";
+      timerEl.style.color = "yellow";
+    } else {
+      progressBar.style.background = "limegreen";
+      timerEl.style.color = "#00FF00";
+    }
+  }, 1000); // Run every 1000ms (1 second)
+
+  // Görev listesi
+  const taskList = [
+    "Sunucudan veri çek",
+    "Şifreli klasörü çöz",
+    "Log kayıtlarını sil",
+    "Ağ trafiğini analiz et",
+    "Güvenlik duvarını bypass et",
+    "Veritabanına sız",
+    "Sistem kontrolünü ele geçir"
+  ];
+
+  // Görevleri güncelleme fonksiyonu
+  function updateTasks() {
+    const taskItems = document.getElementById('taskItems');
+    if (görevIndex < taskList.length) {
+      taskItems.innerHTML = `
+        <div class="task-item">
+          <span class="task-content">${taskList[görevIndex]}</span>
+        </div>
+      `;
+    }
+  }
+
+  // Sayfa yüklendiğinde ilk görevi başlat
+  document.addEventListener("DOMContentLoaded", function() {
+    updateTasks();
+  });
+
+  // İpucu gösterme fonksiyonu
+  function showHint() {
+    if (typeof görevIndex !== 'undefined' && ogreticiNotlar[görevIndex]) {
+      // Her iki ipucuda bir veri sızdır
+      window.hintCount = (window.hintCount || 0) + 1;
+      if (window.hintCount % 2 === 0) {
+        veri--;
+        güncelleVeri();
+      }
+      const hintDiv = document.createElement('div');
+      hintDiv.className = 'warning-text';
+      hintDiv.innerHTML = `📌 İpucu: ${ogreticiNotlar[görevIndex]}`;
+      terminal.appendChild(hintDiv);
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+  }
+
+  // İpucu butonuna tıklanınca
+  const hintButton = document.querySelector('.hint-button');
+  if (hintButton) {
+    hintButton.addEventListener('click', showHint);
+  }
+
+  // Terminal komutunda 'ipucu' girilirse
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const komut = input.value.trim().toLowerCase();
+      if (komut === 'ipucu') {
+        showHint();
+        input.value = "";
+        return;
+      }
+    }
+    // ... mevcut kod ...
+  });
+});
+</script>
+</body>
+</html>
