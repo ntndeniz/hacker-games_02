@@ -435,8 +435,9 @@
     }
 
     .terminal-text {
+      display: block;
+      white-space: normal;
       position: relative;
-      display: inline-block;
       text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
     }
 
@@ -854,7 +855,7 @@
   <span class="task-text">Aktif Görev:</span>
   <div class="task-items" id="taskItems">
     <div class="task-item">
-      <span class="task-content">Sunucudan veri çek</span>
+      <span class="task-content">Yerel Ağa Sız</span>
     </div>
   </div>
 </div>
@@ -885,7 +886,7 @@
 </div>
 
 <div class="progress-bar" id="progress"></div>
-<div id="explosion">💥 PATLAMA! Süre dolmak üzere!</div>
+<div id="explosion">💥 Süren dolmak üzere, acele et!!</div>
 <div id="terminal"></div>
 <div class="matrix-overlay"></div>
 <div class="scanline"></div>
@@ -912,32 +913,138 @@ document.addEventListener("DOMContentLoaded", function () {
     commandHistory.innerHTML = '';
   }
 
+  // Gereksiz değişkenler kaldırıldı
   let görevIndex = 0;
   let veri = 5;
   let kalanSaniye = 10 * 60;
   let hızKatı = 1;
   let commandHistoryIndex = -1;
-  let commandHistoryList = []; // Her sayfa yüklendiğinde boş başlar
-  let score = 0;
-  
-  // Komut geçmişini temizle
-  commandHistoryList = [];
-  commandHistoryIndex = -1;
+  let commandHistoryList = [];
   let isEditorMode = false;
-  let currentEditorContent = '';
-  let currentCursorPosition = 0;
   let timerInterval;
-  let ipucuSayisi = 0;
+  // let score = 0; // kaldırıldı
+  // let ipucuSayisi = 0; // kaldırıldı
+  // let currentEditorContent = ''; // kaldırıldı
+  // let currentCursorPosition = 0; // kaldırıldı
 
+  // Çoklu ipucu desteği için ogreticiNotlar'ı dizi dizisi yap
   const ogreticiNotlar = [
-    "💡 DHCP komutu: 'dhcp-discover' ile başlar ve '--interface eth0' parametresi ile devam eder. Bu komut ağdaki DHCP sunucusundan IP adresi ister.",
-    "💡 Nmap ile ağ taraması yapmak için: 'nmap -sn [ağ_adresi]' formatını kullan. Örnek: nmap -sn 10.16.0.0/24",
-    "💡 Hydra ile parola kırmak için: 'hydra -l [kullanıcı] -P [wordlist] [servis]://[hedef]' formatını kullan.",
-    "💡 sshpass ile otomatik SSH bağlantısı için: 'sshpass -p [parola] ssh [kullanıcı]@[hedef]' formatını kullan.",
-    "💡 locate komutu ile dosya aramak için: 'locate [dosya_adı]' formatını kullan.",
-    "💡 nano editörü ile dosya düzenlemek için: 'nano [dosya_yolu]' formatını kullan. Kaydetmek için CTRL+O, çıkmak için CTRL+X",
-    "💡 Oturumu kapatmak için 'exit' komutunu kullan."
+    [
+      "💡 DHCP komutu: 'dhcp-discover' ile başlar ve '--interface eth0' parametresi ile devam eder.",
+      "💡 IP almak için: dhcp-discover --interface eth0 komutunu kullan.",
+      "💡 DHCP ile ağdan IP adresi almak için doğru interface'i belirtmelisin.",
+      "💡 Komutun sonunda interface adını (ör: eth0) doğru yazmalısın.",
+      "💡 DHCP komutunda tire ve parametreleri eksiksiz kullanmalısın."
+    ],
+    [
+      "💡 nbtscan ile ağ taraması yapmak için: 'nbtscan [ağ_adresi]' formatını kullan.",
+      "💡 Aktif cihazları bulmak için nbtscan komutunu kullan",
+      "💡 Ağ adresini doğru yazdığından emin ol: 10.16.23.48",
+    ],
+    [
+      "💡 Hydra ile parola kırmak için: 'hydra -l [kullanıcı] -P [wordlist] [servis]://[hedef]' formatını kullan.",
+      "💡 SSH brute force için: hydra -l t.timucin -P /usr/share/wordlists/deneneceksifreler.txt ssh://10.16.0.88",
+      "💡 Parola kırma işlemi için doğru kullanıcı ve wordlist dosyasını belirtmelisin.",
+      "💡 Komutta kullanıcı adı ve hedef IP adresi eksiksiz olmalı.",
+      "💡 Wordlist dosyasının tam yolunu yazmalısın."
+    ],
+    [
+      "💡 sshpass ile otomatik SSH bağlantısı için: 'sshpass -p [parola] ssh [kullanıcı]@[hedef]' formatını kullan.",
+      "💡 SSH bağlantısı için parola ve kullanıcıyı doğru gir.",
+      "💡 sshpass ile tek satırda parola ile SSH bağlantısı kurabilirsin.",
+      "💡 Parola parametresi '-p' ile verilmeli.",
+      "💡 SSH bağlantısında kullanıcı adı ve IP adresi '@' ile ayrılır."
+    ],
+    [
+      "💡 locate komutu ile dosya aramak için: 'locate [dosya_adı]' formatını kullan.",
+      "💡 Dosya bulmak için önce 'ls', sonra 'cd', sonra tekrar 'ls' ve 'nano' kullan.",
+      "💡 Sınav notları Documents dizininde olabilir.",
+      "💡 'cd' komutuyla doğru dizine geçmeden dosyayı açamazsın.",
+      "💡 Dosya adını küçük harflerle ve uzantısıyla birlikte yazmalısın."
+    ],
+    [
+      "💡 nano editörü ile dosya düzenlemek için: 'nano [dosya_yolu]' formatını kullan.",
+      "💡 Kaydetmek için CTRL+O, çıkmak için CTRL+X",
+      "💡 Editörde yön tuşlarıyla hareket edebilirsin.",
+      "💡 Dosya adını doğru yazmazsan nano açılmaz.",
+      "💡 nano editöründe değişiklikleri kaydetmeden çıkarsan düzenlemeler kaybolur."
+    ],
+    [
+      "💡 Oturumu kapatmak için 'exit' komutunu kullan.",
+      "💡 Log dosyalarını temizlemek için sed komutunu kullanabilirsin.",
+      "💡 Sadece t.timucin kayıtlarını silmek için: sed '/t.t.../d' /var/log/auth.log /var/log/secure",
+      "💡 sed komutunda arama desenini doğru yazmalısın.",
+      "💡 Birden fazla log dosyasını aynı anda sed ile işleyebilirsin."
+    ]
   ];
+
+  // Her görev için gösterilen ipuçlarını takip et
+  const shownHints = {};
+
+  // Ortak ipucu gösterme fonksiyonu
+  function showHint() {
+    if (typeof görevIndex !== 'undefined' && ogreticiNotlar[görevIndex]) {
+      // Görev için gösterilen ipuçlarını al
+      if (!shownHints[görevIndex]) shownHints[görevIndex] = [];
+      const allHints = ogreticiNotlar[görevIndex];
+      const shown = shownHints[görevIndex];
+      // Gösterilmeyen ipuçlarını bul
+      const notShown = allHints.filter(h => !shown.includes(h));
+      let hintMsg = '';
+      if (notShown.length === 0) {
+        hintMsg = 'Tüm ipuçları gösterildi.';
+      } else {
+        // Rastgele bir ipucu seç
+        const idx = Math.floor(Math.random() * notShown.length);
+        hintMsg = notShown[idx];
+        shown.push(hintMsg);
+      }
+      // Veri sızdırma mantığı
+      window.hintCount = (window.hintCount || 0) + 1;
+      let dataLeaked = false;
+      if (window.hintCount % 2 === 0) {
+        veri--;
+        güncelleVeri();
+        dataLeaked = true;
+      }
+      // Terminale ipucu yaz
+      const hintDiv = document.createElement('div');
+      hintDiv.className = 'warning-text';
+      hintDiv.innerHTML = `📌 İpucu: ${hintMsg}`;
+      terminal.appendChild(hintDiv);
+      if (dataLeaked) {
+        const leakDiv = document.createElement('div');
+        leakDiv.className = 'error-text';
+        leakDiv.innerHTML = `Veri sızdırıldı. Kalan veri: ${veri}`;
+        terminal.appendChild(leakDiv);
+        if (veri <= 0) {
+          maviEkran();
+          input.disabled = true;
+          return;
+        }
+      }
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+  }
+
+  // İpucu butonuna tıklanınca
+  const hintButton = document.querySelector('.hint-button');
+  if (hintButton) {
+    hintButton.addEventListener('click', showHint);
+  }
+
+  // Terminal komutunda 'ipucu' girilirse
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const komut = input.value.trim().toLowerCase();
+      if (komut === 'ipucu') {
+        showHint();
+        input.value = "";
+        return;
+      }
+    }
+    // ... mevcut kod ...
+  });
 
   const görevler = [
     {
@@ -946,9 +1053,9 @@ document.addEventListener("DOMContentLoaded", function () {
       yanıt: "IP adresi alındı: 10.16.23.48  [✔]"
     },
     {
-      soru: ">> GÖREV #2: Yerel ağdaki cihazları tespit etmek için doğru Nmap komutunu gir.\n>> Komut: ________ -sn ______",
-      cevap: "nmap -sn 10.16.0.0/24",
-      yanıt: "Ağ taraması tamamlandı: 10.16.0.88 (t.timucin cihazı) bulundu.  [✔]"
+      soru: ">> GÖREV #2: Yerel ağdaki cihazları tespit etmek için nbtscan komutunu gir.\n>> Komut: ______________",
+      cevap: "nbtscan 10.16.23.48",
+      yanıt: "> nbtscan 10.16.0.0/24\nDoing NBT name scan for addresses from 10.16.0.0 to 10.16.0.255\nIP address       NetBIOS Name     User             MAC Address\n-----------------------------------------------------------------------\n10.16.0.70       DELL-STUDENT1    A.KAYA           00:1A:2B:3C:4D:01\n10.16.0.71       HP-LABPC01       B.YILMAZ         00:1A:2B:3C:4D:02\n10.16.0.72       LENOVO-ADMIN     --------        00:1A:2B:3C:4D:03\n10.16.0.73       ACER-LAB02       D.TURAN          00:1A:2B:3C:4D:04\n10.16.0.74       ASUS-STUDENT3    --------        00:1A:2B:3C:4D:05\n10.16.0.75       CAMERA-NET       --------        00:1D:44:2E:61:55\n10.16.0.76       LENOVO-PC04      F.KARACA         00:1A:2B:3C:4D:06\n10.16.0.77       MSI-STUDENT6     G.SARI           00:1A:2B:3C:4D:07\n10.16.0.78       TOSHIBA-LAB05    --------        00:1A:2B:3C:4D:08\n10.16.0.79       HP-PC07          I.CELIK          00:1A:2B:3C:4D:09\n10.16.0.80       DELL-TEACHER     J.DOGAN          00:1A:2B:3C:4D:0A\n10.16.0.81       ASUS-STUDENT9    --------        00:1A:2B:3C:4D:0B\n10.16.0.82       ACER-PC10        L.ERDEM          00:1A:2B:3C:4D:0C\n10.16.0.83       LENOVO-X230      M.BULUT          00:1A:2B:3C:4D:0D\n10.16.0.84       HP-ENVY15        --------        00:1A:2B:3C:4D:0E\n10.16.0.85       MSI-GP63         O.SIMSEK         00:1A:2B:3C:4D:0F\n10.16.0.86       DELL-INSPIRON    --------        00:1A:2B:3C:4D:10\n10.16.0.87       ASUS-VIVOBOOK    R.OZTURK         00:1A:2B:3C:4D:11\n10.16.0.88       TIMUCIN-PC       t.timucin        00:1C:42:2E:60:4A\n10.16.0.89       HP-PAVILION      S.AYDOGAN        00:1A:2B:3C:4D:12\n10.16.0.90       LENOVO-YOGA      --------        00:1A:2B:3C:4D:13\n10.16.0.91       ACER-ASPIRE      --------        00:1A:2B:3C:4D:14\n10.16.0.92       PRINTER-HP       --------        00:1E:AA:3C:11:77\n10.16.0.93       SMARTBOARD       --------        00:1A:2B:3C:4D:15\n10.16.0.94       CAMERA-LAB3      --------        00:1A:2B:3C:4D:16\n Ağ taraması tamamlandı:"
     },
     {
       soru: ">> GÖREV #3: SSH üzerinden hedef cihazda oturum açmak için doğru Hydra komutunu gir.\n>> Komut: hydra -l ______ -P ______ /usr/share/wordlists/deneneceksifreler.txt ssh://_____",
@@ -962,7 +1069,7 @@ document.addEventListener("DOMContentLoaded", function () {
       yanıt: "SSH bağlantısı kuruldu.  [✔]"
     },
     {
-      soru: ">> GÖREV #5: Hedef cihazda sınav notları dosyasını bulmak için:\n>> 1. Önce 'ls' komutu ile dosyaları listele\n>> 2. Sonra 'cd Documents' komutu ile Documents dizinine gir\n>> 3. Tekrar 'ls' yazarak dosyaları listele\n>> 4. Son olarak 'nano organizasyon_vize.txt' yazarak dosyayı aç\n>> Başlangıç konumu: /home/t.timucin",
+      soru: ">> GÖREV #5: Hedef cihazda sınav notları dosyasını bulmak için kullanman gereken kodlar:\n>> 1.'ls' komutu : dosyaları listeler.\n>> 2.'cd' komutu dosyaların dizinine girmek için kullanılır.\n>> 3.'nano' dosya içerisini yazdırır.\n>> Başlangıç konumu: /home/t.timucin",
       cevap: "nano organizasyon_vize.txt",
       yanıt: "Dosya başarıyla bulundu! Editör açılıyor... [✔]",
       allowedCommands: ["cd", "ls", "nano"],
@@ -1056,48 +1163,22 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   ];
 
+  // Kullanılmayan extraKomutlar'daki ipucu fonksiyonu kaldırıldı
   const extraKomutlar = {
-    "görevi tekrar et": () => görevler[görevIndex]?.soru || "Tüm görevler bitti.",
-    "ipucu": () => {
-      ipucuSayisi++;
-      if (ipucuSayisi % 2 === 0) {
-        veri--;
-        güncelleVeri();
-        return `📌 İpucu: ${ogreticiNotlar[görevIndex]}\n⚠️ Not: 2 ipucu aldığın için 1 veri sızdırıldı. Kalan veri: ${veri}`;
-      }
-      return `📌 İpucu: ${ogreticiNotlar[görevIndex]}\n⚠️ Not: Bir ipucu daha alırsan 1 veri sızdırılacak.`;
-    }
+    "görevi tekrar et": () => görevler[görevIndex]?.soru || "Tüm görevler bitti."
   };
 
-  // Komut ipuçları
-  const commandHints = {
-    'dhcp-discover': 'Ağ arayüzü üzerinden DHCP keşfi başlatır',
-    'nmap': 'Ağ tarama aracı',
-    'hydra': 'Parola kırma aracı',
-    'sshpass': 'SSH parola ile otomatik giriş',
-    'locate': 'Dosya arama komutu',
-    'nano': 'Metin editörü',
-    'ipucu': 'Mevcut görev için ipucu al',
-    'görevi tekrar et': 'Mevcut görevi tekrar göster'
-  };
+  // Kullanılmayan commandHints ve getCommandSuggestions kaldırıldı
+  // function getCommandSuggestions(input) { ... }
+  // const commandHints = { ... }
 
-  // Komut geçmişi yönetimi
-  function addToHistory(command) {
-    if (command && command !== commandHistoryList[0]) {
-      commandHistoryList.unshift(command);
-      if (commandHistoryList.length > 10) {
-        commandHistoryList.pop();
-      }
-      updateCommandHistory();
-    }
-  }
+  // Kullanılmayan addToHistory ve updateCommandHistory kaldırıldı
+  // function addToHistory(command) { ... }
+  // function updateCommandHistory() { ... }
 
-  function updateCommandHistory() {
-    const historyEl = document.getElementById('commandHistory');
-    historyEl.innerHTML = commandHistoryList
-      .map(cmd => `<div class="history-item">${cmd}</div>`)
-      .join('');
-  }
+  // Kullanılmayan showTooltip ve showAnimatedMessage kaldırıldı
+  // function showTooltip(element, text) { ... }
+  // function showAnimatedMessage(message, type = 'info') { ... }
 
   // Komut otomatik tamamlama
   function getCommandSuggestions(input) {
@@ -1423,7 +1504,6 @@ document.addEventListener("DOMContentLoaded", function () {
     
     // Activate editor mode
     isEditorMode = true;
-    currentEditorContent = content;
     
     // Add editor styles
     const style = document.createElement('style');
@@ -1489,7 +1569,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Handle editor keyboard events
     editorContent.addEventListener('input', (e) => {
-      currentEditorContent = e.target.textContent;
+      // currentEditorContent = e.target.textContent;
     });
 
     editorContent.addEventListener('keydown', (e) => {
@@ -1504,12 +1584,7 @@ document.addEventListener("DOMContentLoaded", function () {
         } else if (e.key === 'x') {
           e.preventDefault();
           exitEditor();
-          const exitMsg = document.createElement('div');
-          exitMsg.className = 'success-text';
-          exitMsg.innerHTML = '✨ Editör kapatıldı. Değişiklikler kaydedildi.';
-          terminal.appendChild(exitMsg);
-          
-          // Show next task if available
+          // Görev ilerletme ve yeni görev ekleme sadece burada
           görevIndex++;
           updateTaskStatus();
           if (görevIndex < görevler.length) {
@@ -1539,19 +1614,11 @@ document.addEventListener("DOMContentLoaded", function () {
     if (editorDiv) {
       editorDiv.remove();
     }
-    
-    // Show success message for Task 6
+    // Sadece başarı mesajı göster
     const successDiv = document.createElement('div');
     successDiv.innerHTML = görevler[görevIndex].yanıt;
     successDiv.className = 'success-text';
     terminal.appendChild(successDiv);
-    
-    // Show Task 7 without incrementing görevIndex or updating progress
-    const nextTaskDiv = document.createElement('div');
-    nextTaskDiv.innerHTML = görevler[6].soru;
-    nextTaskDiv.className = 'task-container';
-    terminal.appendChild(nextTaskDiv);
-    
     terminal.scrollTop = terminal.scrollHeight;
   }
 
@@ -1619,11 +1686,6 @@ document.addEventListener("DOMContentLoaded", function () {
         successDiv.className = 'success-text';
         successDiv.innerHTML = 'Parola bulundu: Tunahan.123  [✔]';
         animationDiv.appendChild(successDiv);
-        
-        const learnDiv = document.createElement('div');
-        learnDiv.innerHTML = `📘 Öğren: ${ogreticiNotlar[görevIndex]}`;
-        learnDiv.className = 'warning-text';
-        animationDiv.appendChild(learnDiv);
         
         görevIndex++;
         updateTaskStatus();
@@ -1856,7 +1918,21 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       
       if (aktifGörev && komut === aktifGörev.cevap.toLowerCase()) {
-        if (aktifGörev.showPasswordCracking) {
+        if (görevIndex === 0) {
+          // Görev 1 için özel animasyon
+          showNetworkBreachAnimation(function() {
+            görevIndex++;
+            updateTasks();
+            updateTaskStatus();
+            // Görev 2'yi terminale ekle
+            if (görevIndex < görevler.length) {
+              const nextTaskDiv = document.createElement('div');
+              nextTaskDiv.innerHTML = görevler[görevIndex].soru;
+              nextTaskDiv.className = 'task-container';
+              terminal.appendChild(nextTaskDiv);
+            }
+          });
+        } else if (aktifGörev.showPasswordCracking) {
           showPasswordCrackingAnimation();
         } else if (aktifGörev.editorMode) {
           showNanoEditor(aktifGörev.editorContent);
@@ -1865,11 +1941,6 @@ document.addEventListener("DOMContentLoaded", function () {
           successDiv.innerHTML = aktifGörev.yanıt;
           successDiv.className = 'success-text';
           terminal.appendChild(successDiv);
-
-          const learnDiv = document.createElement('div');
-          learnDiv.innerHTML = `📘 Öğren: ${ogreticiNotlar[görevIndex]}`;
-          learnDiv.className = 'warning-text';
-          terminal.appendChild(learnDiv);
 
           görevIndex++;
           updateTasks(); // Görev tamamlandığında görevleri güncelle
@@ -1944,9 +2015,9 @@ document.addEventListener("DOMContentLoaded", function () {
     kalanSaniye -= hızKatı;
     if (kalanSaniye <= 0) {
       timerEl.textContent = "SÜRE BİTTİ";
-      terminal.innerHTML += "\n\n>> [!] Süre doldu. Görev başarısız.";
-      input.disabled = true;
       clearInterval(timerInterval); // Timer'ı durdur
+      gameOver(); // Mavi ekranı göster
+      input.disabled = true;
       return;
     }
 
@@ -1975,11 +2046,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Görev listesi
   const taskList = [
-    "Sunucudan veri çek",
-    "Şifreli klasörü çöz",
-    "Log kayıtlarını sil",
+    "Yerel Ağa Sız",
+    "Ağdaki Cihazları Tespit Et",
+    "Hedef Cihazda Oturum Aç",
     "Ağ trafiğini analiz et",
-    "Güvenlik duvarını bypass et",
+    "Sınav Dosyasını Bul ve Düzenle",
     "Veritabanına sız",
     "Sistem kontrolünü ele geçir"
   ];
@@ -2001,41 +2072,87 @@ document.addEventListener("DOMContentLoaded", function () {
     updateTasks();
   });
 
-  // İpucu gösterme fonksiyonu
-  function showHint() {
-    if (typeof görevIndex !== 'undefined' && ogreticiNotlar[görevIndex]) {
-      // Her iki ipucuda bir veri sızdır
-      window.hintCount = (window.hintCount || 0) + 1;
-      if (window.hintCount % 2 === 0) {
-        veri--;
-        güncelleVeri();
+  // Görev 1 için bar üstte, açıklama altta animasyon
+  function showNetworkBreachAnimation(callback) {
+    const steps = [
+      { bar: '[█...................] 5%', desc: 'Ağ taraması başlatılıyor...' },
+      { bar: '[███.................] 20%', desc: 'DHCPDISCOVER paketi gönderiliyor...' },
+      { bar: '[███████.............] 45%', desc: 'DHCPOFFER yanıtı bekleniyor...' },
+      { bar: '[████████████........] 75%', desc: 'Ağdan teklif toplanıyor...' },
+      { bar: '[██████████████████...] 90%', desc: 'Yapılandırma uygulanıyor...' },
+      { bar: '[█████████████████████] 100%', desc: 'Adres Alındı:10.16.23.48 ! Ağa başarıyla sızıldı! ' }
+    ];
+    let i = 0;
+    function nextFrame() {
+      if (i < steps.length) {
+        // Bar satırı
+        const barDiv = document.createElement('div');
+        barDiv.className = 'terminal-text';
+        barDiv.textContent = steps[i].bar;
+        barDiv.style.color = (i === steps.length - 1) ? '#0f0' : '#0ff';
+        barDiv.style.fontWeight = 'bold';
+
+        // Açıklama satırı
+        const descDiv = document.createElement('div');
+        descDiv.className = 'terminal-text';
+        descDiv.textContent = steps[i].desc;
+        descDiv.style.color = (i === steps.length - 1) ? '#0f0' : '#fff';
+        descDiv.style.fontWeight = (i === steps.length - 1) ? 'bold' : 'normal';
+        descDiv.style.fontSize = (i === steps.length - 1) ? '1.2em' : '';
+        descDiv.style.textShadow = (i === steps.length - 1) ? '0 0 10px #0f0, 0 0 20px #0ff' : '';
+        descDiv.style.animation = (i === steps.length - 1) ? 'glowAnim 1.2s infinite alternate' : '';
+
+        terminal.appendChild(barDiv);
+        terminal.appendChild(descDiv);
+        terminal.scrollTop = terminal.scrollHeight;
+        i++;
+        setTimeout(nextFrame, 900);
+      } else if (typeof callback === 'function') {
+        setTimeout(callback, 900);
       }
-      const hintDiv = document.createElement('div');
-      hintDiv.className = 'warning-text';
-      hintDiv.innerHTML = `📌 İpucu: ${ogreticiNotlar[görevIndex]}`;
-      terminal.appendChild(hintDiv);
-      terminal.scrollTop = terminal.scrollHeight;
     }
+    nextFrame();
   }
 
-  // İpucu butonuna tıklanınca
-  const hintButton = document.querySelector('.hint-button');
-  if (hintButton) {
-    hintButton.addEventListener('click', showHint);
-  }
+  function gameOver() {
+    const bluescreen = document.createElement('div');
+    bluescreen.className = 'bluescreen';
+    bluescreen.innerHTML = `
+      <div class="bluescreen-content">
+        <div class="bluescreen-header">*** STOP: 0x000000D3 (SÜRE_DOLDU)</div>
+        <div class="bluescreen-body">
+          <p>Süre doldu! Görev başarısız!</p>
+          <p>Hacker tüm verilerinize erişti...</p>
+          <div class="bluescreen-progress">
+            <div class="bluescreen-progress-bar"></div>
+          </div>
+          <p class="bluescreen-footer">Sistem güvenliği ihlal edildi. Yeniden başlatılıyor...</p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(bluescreen);
 
-  // Terminal komutunda 'ipucu' girilirse
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      const komut = input.value.trim().toLowerCase();
-      if (komut === 'ipucu') {
-        showHint();
-        input.value = "";
-        return;
+    // Mavi ekran animasyonu
+    const progressBar = bluescreen.querySelector('.bluescreen-progress-bar');
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 1;
+      progressBar.style.width = `${progress}%`;
+      if (progress >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          document.body.style.backgroundColor = '#0000AA';
+          bluescreen.style.opacity = '0';
+          setTimeout(() => {
+            document.body.innerHTML = '<div class="bluescreen">Sistem yeniden başlatılıyor...</div>';
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          }, 1000);
+        }, 1000);
       }
-    }
-    // ... mevcut kod ...
-  });
+    }, 50);
+  }
 });
 </script>
 </body>
